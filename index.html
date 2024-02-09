@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>To-Do-List</title>
+  <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+
+<body>
+  <div class="container">
+    <div class="todo-app">
+      <div class="header">
+        <h2>To-Do-List <img src="images/icon.png" alt="icon"></h2>
+        <div class="date-box">
+          <p id="current-date"></p>
+        </div>
+      </div>
+      <div class="row">
+        <input type="text" id="input-box" placeholder="Add Your Text">
+        <button id="add-button">Add</button>
+      </div>
+      <ul id="list-container">
+        <!-- <li class="checked">Task 1</li>
+        <li>Task 2</li>
+        <li>Task 3</li> -->
+      </ul>
+    </div>
+  </div>
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const inputBox = document.getElementById("input-box");
+      const listContainer = document.getElementById("list-container");
+      const currentDateElement = document.getElementById("current-date");
+
+      function addTask() {
+        if (inputBox.value === "") {
+          alert("You must write something");
+        } else {
+          const currentDate = new Date();
+          const options = { year: 'numeric', month: 'numeric', day: 'numeric' };
+          const formattedDate = currentDate.toLocaleDateString('en-US', options);
+
+          let li = document.createElement("li");
+          li.innerHTML = inputBox.value;
+          listContainer.appendChild(li);
+          let span = document.createElement("span");
+          span.innerHTML = "\u00d7";
+          li.appendChild(span);
+
+          saveData(formattedDate); // Save data with the current date as the key
+
+          // Make an AJAX request to add the task
+          fetch('/addTask', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ task: inputBox.value, date: formattedDate }),
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              console.log(data.message);
+            })
+            .catch((error) => {
+              console.error('Error:', error);
+            });
+        }
+        inputBox.value = "";
+      }
+
+      function updateDate() {
+        const currentDate = new Date();
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        const formattedDate = currentDate.toLocaleDateString('en-US', options);
+        currentDateElement.textContent = formattedDate;
+      }
+
+      listContainer.addEventListener(
+        "click",
+        function (e) {
+          if (e.target.tagName === "LI") {
+            e.target.classList.toggle("checked");
+          } else if (e.target.tagName === "SPAN") {
+            e.target.parentElement.remove();
+            const currentDate = new Date();
+            const options = { year: 'numeric', month: 'numeric', day: 'numeric' };
+            const formattedDate = currentDate.toLocaleDateString('en-US', options);
+            saveData(formattedDate); // Save data with the current date as the key after removing an item
+
+            // Make an AJAX request to remove the task
+            fetch('/removeTask', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ date: formattedDate, task: e.target.parentElement.textContent }),
+            })
+              .then((response) => response.json())
+              .then((data) => {
+                console.log(data.message);
+              })
+              .catch((error) => {
+                console.error('Error:', error);
+              });
+          }
+        },
+        false
+      );
+
+      function saveData(dateKey) {
+        const currentData = localStorage.getItem(dateKey) || ""; // Get existing data or an empty string
+        localStorage.setItem(dateKey, currentData + listContainer.innerHTML);
+      }
+
+      function showTask(dateKey) {
+        listContainer.innerHTML = localStorage.getItem(dateKey) || ""; // Get data for the specified date or use an empty string
+      }
+
+      updateDate(); // Call the function to display the date initially
+
+      // Event listener for the button
+      document.getElementById("add-button").addEventListener("click", addTask);
+
+      // Set an interval to update the date every day
+      setInterval(function () {
+        updateDate();
+        const currentDate = new Date();
+        const options = { year: 'numeric', month: 'numeric', day: 'numeric' };
+        const formattedDate = currentDate.toLocaleDateString('en-US', options);
+        showTask(formattedDate);
+      }, 86400000); // 86400000 milliseconds = 24 hours
+    });
+  </script>
+</body>
+
+</html>
